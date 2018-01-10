@@ -1,43 +1,39 @@
 // This code closely follows RelayDefaultNetworkLayer.
 
 import fetchWithRetries from 'fbjs/lib/fetchWithRetries';
-import Relay from 'react-relay';
+import Relay from 'react-relay/classic';
 
-import formatRequestErrors from './__forks__/formatRequestErrors';
+import createRequestError from './__forks__/createRequestError'
 
 export default class NetworkLayer extends Relay.DefaultNetworkLayer {
   sendQueries(requests) {
-    return this._sendQueries(requests).then(
-      result => result.json()
-    ).then(payloads => {
-      requests.forEach((request, index) => {
-        let payload;
-        if (payloads && payloads[index]) {
-          payload = payloads[index];
-        } else {
-          payload = payloads;
-        }
+    return this._sendQueries(requests)
+      .then(result => result.json())
+      .then(payloads => {
+        requests.forEach((request, index) => {
+          let payload;
+          if (payloads && payloads[index]) {
+            payload = payloads[index];
+          } else {
+            payload = payloads;
+          }
 
-        if (Object.prototype.hasOwnProperty.call(payload, 'errors')) {
-          const error = new Error(
-            'Server request for query `' + request.getDebugName() + '` ' +
-            'failed for the following reasons:\n\n' +
-            formatRequestErrors(request, payload.errors)
-          );
-          error.source = payload;
-          request.reject(error);
-        } else if (!Object.prototype.hasOwnProperty.call(payload, 'data')) {
-          request.reject(new Error(
-            'Server response was missing for query `' + request.getDebugName() +
-            '`.'
-          ));
-        } else {
-          request.resolve({response: payload.data});
-        }
+          if (payload.hasOwnProperty('errors')) {
+            const error = createRequestError(request, '200', payload);
+            request.reject(error);
+          } else if (!payload.hasOwnProperty('data')) {
+            request.reject(
+              new Error(
+                'Server response was missing for query ' +
+                  `\`${request.getDebugName()}\`.`,
+              ),
+            );
+          } else {
+            request.resolve({ response: payload.data });
+          }
+        });
       })
-    }).catch(
-      error => requests.forEach(request => request.reject(error))
-    );
+      .catch(error => requests.forEach(request => request.reject(error)));
   }
 
   _sendQueries(requests) {

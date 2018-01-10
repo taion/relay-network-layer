@@ -5,6 +5,7 @@
     "plugin:import/warnings"
   ],
   "parserOptions": {
+    "ecmaVersion": 8,
     "sourceType": "module",
     "ecmaFeatures": {
       "experimentalObjectRestSpread": true
