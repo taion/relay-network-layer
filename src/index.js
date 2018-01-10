@@ -18,10 +18,16 @@ export default class NetworkLayer extends Relay.DefaultNetworkLayer {
             payload = payloads;
           }
 
-          if ('errors' in payload) {
-            // eslint-disable-next-line no-use-before-define
+          if (payload.hasOwnProperty('errors')) {
             const error = createRequestError(request, '200', payload);
             request.reject(error);
+          } else if (!payload.hasOwnProperty('data')) {
+            request.reject(
+              new Error(
+                'Server response was missing for query ' +
+                  `\`${request.getDebugName()}\`.`,
+              ),
+            );
           } else {
             request.resolve({ response: payload.data });
           }
